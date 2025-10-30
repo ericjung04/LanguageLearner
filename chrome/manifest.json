@@ -1,0 +1,19 @@
+{
+    "manifest_version": 3,
+    "name": "Linguist",
+    "version": "1.0.0",
+    "description": "An interactive tool to help those learn a language through immersion of content",
+    "icons": {
+        "16": "public/icon16.png",
+        "48": "public/icon48.png",
+        "128": "public/icon128.png"
+    } ,
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "public/icon16.png",
+            "48": "public/icon48.png",
+            "128": "public/icon128.png"
+        }
+    }
+}
