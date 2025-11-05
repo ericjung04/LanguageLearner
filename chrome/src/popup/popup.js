@@ -22,7 +22,8 @@ if (saveButton && noteInput && savedText) {
   });
 }
 
-// Send message to the content script
+
+// Send message directly to the content script, not service worker (For reference now)
 function changeBgColor() {
   const btn = document.getElementById('bgButton');
   if (!btn) return;
@@ -32,10 +33,7 @@ function changeBgColor() {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) return;
 
-      chrome.tabs.sendMessage(
-        tab.id,
-        { type: 'CHANGE_BG', color: '#d52121ff' },
-        (response) => {
+      chrome.tabs.sendMessage(tab.id, { type: 'CHANGE_BG', color: '#d52121ff' }, (response) => {
           if (chrome.runtime.lastError) {
             console.warn('Runtime error:', chrome.runtime.lastError.message);
             return;
@@ -49,8 +47,35 @@ function changeBgColor() {
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', changeBgColor);
-} else {
-  changeBgColor();
+
+// Send a ping notification to the service worker so that the content can see it
+function sendPing() {
+  const btn = document.getElementById('pingButton');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    chrome.runtime.sendMessage({type : 'PING', payload : 'Hello from popup!'}, (response) => {
+      if (chrome.runtime.lastError)
+      {
+        console.warn('Error sending message: ', chrome.runtime.lastError.message);
+        return;
+      } 
+      if (response?.ok)
+      {
+        const ts = response.data?.ts;
+        const readable = new Date(ts).toLocaleDateString();
+        console.log('Ping successfully received by service worker at ', readable);
+      }
+    })  
+  });
+}
+
+
+if (document.readyState === 'loading') 
+{
+  document.addEventListener('DOMContentLoaded', sendPing);
+}
+else 
+{
+  sendPing();
 }

@@ -1,11 +1,8 @@
-// Script to change the background color when the change color button in the popup is clicked, for testing purposes for now
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === 'CHANGE_BG')
+// Currently listens for a PING message from the popup, logs acknowledgement in page's console
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === 'PING')
     {
-        const color = msg.color || '#fff7b1';
-        document.documentElement.style.backgroundColor = color;
-        console.log('Background color changed!');
+        console.log('Ping received from popup!');
         sendResponse({ok : true});
-        return;
     }
 });
