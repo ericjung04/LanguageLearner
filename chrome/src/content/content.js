@@ -4,5 +4,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     {
         console.log('Ping received from popup!');
         sendResponse({ok : true});
+        return;
     }
 });

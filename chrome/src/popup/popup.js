@@ -74,8 +74,10 @@ function sendPing() {
 if (document.readyState === 'loading') 
 {
   document.addEventListener('DOMContentLoaded', sendPing);
+  document.addEventListener('DOMContentLoaded', changeBgColor);
 }
 else 
 {
   sendPing();
+  changeBgColor();
 }

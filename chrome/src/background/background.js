@@ -5,6 +5,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'PING': // For testing purposes, will later be different message types
         {
             console.log('PING from ', sender?.id, 'message: ', message.payload);
+            chrome.tabs.query({active : true, currentWindow : true}, (tabs) => {
+                const [tab] = tabs;
+                chrome.tabs.sendMessage(tab.id, {type : 'PING'}, (response) => {
+                if (response.ok) {
+                    console.log('Content script received PING!');
+                }
+                });
+            });
             sendResponse({ok : true, data : {pong : true, ts : Date.now()}});
             return; // Synchronous response so no need to keep channel open
         }
