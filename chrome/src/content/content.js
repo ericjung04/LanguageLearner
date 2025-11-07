@@ -3,6 +3,9 @@ document.addEventListener('selectionchange', () => {
     const selectedText = window.getSelection().toString().trim();
     if (selectedText) {
         console.log(selectedText);
-        chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : selectedText}});
     }
+    else {
+        console.log('Empty');
+    }
+    chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : selectedText}});
 });

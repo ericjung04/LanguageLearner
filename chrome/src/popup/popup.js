@@ -2,6 +2,7 @@
 const noteInput = document.getElementById('noteInput');
 const saveButton = document.getElementById('saveButton');
 const savedText = document.getElementById('savedText');
+const selectedText = document.getElementById('selectedText');
 
 // Display previously saved note
 if (noteInput && savedText) {
@@ -70,14 +71,14 @@ function sendPing() {
   });
 }
 
-// Get the saved text in the service worker
+// Get the current tab's saved text in the service worker
 function getSelectedText() {
   const btn = document.getElementById('textButton');
   if (!btn) return;
 
   btn.addEventListener('click', async () => {
     chrome.runtime.sendMessage({type : 'GET_TEXT'}, (response) => {
-      console.log('Text: ', response.data.text);
+      selectedText.textContent = response.data.text;
     });
   });
 }
