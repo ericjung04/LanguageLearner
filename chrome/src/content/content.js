@@ -1,9 +1,8 @@
-// Currently listens for a PING message from the popup, logs acknowledgement in page's console
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.type === 'PING')
-    {
-        console.log('Ping received from popup!');
-        sendResponse({ok : true});
-        return;
+// Listen for when user selects text on the page
+document.addEventListener('selectionchange', () => {
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText) {
+        console.log(selectedText);
+        chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : selectedText}});
     }
 });

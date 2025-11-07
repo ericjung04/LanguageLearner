@@ -70,14 +70,24 @@ function sendPing() {
   });
 }
 
+// Get the saved text in the service worker
+function getSelectedText() {
+  const btn = document.getElementById('textButton');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    chrome.runtime.sendMessage({type : 'GET_TEXT'}, (response) => {
+      console.log('Text: ', response.data.text);
+    });
+  });
+}
+
 
 if (document.readyState === 'loading') 
 {
-  document.addEventListener('DOMContentLoaded', sendPing);
-  document.addEventListener('DOMContentLoaded', changeBgColor);
+  document.addEventListener('DOMContentLoaded', getSelectedText);
 }
 else 
 {
-  sendPing();
-  changeBgColor();
+  getSelectedText();
 }
