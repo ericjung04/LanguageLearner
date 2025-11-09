@@ -19,7 +19,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return; // Synchronous response so no need to keep channel open
         }
 
-        case 'SELECTION_CHANGED' : // User selected text on the page, store in service worker
+        case 'SELECTION_CHANGED' : // User selected/deselected text on the page
         {
             // Get tab where text was selected, send error if can't find ID
             const tabId = sender.tab?.id;
