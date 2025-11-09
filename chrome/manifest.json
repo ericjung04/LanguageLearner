@@ -20,11 +20,11 @@
     "service_worker": "src/background/background.js"
   },
   "permissions": ["storage", "tabs"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "host_permissions": ["<all_urls>"],
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content/content.js"],
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.js", "src/content/simulator.js"],
       "run_at": "document_idle"
     }
   ]
