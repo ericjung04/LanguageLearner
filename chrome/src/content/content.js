@@ -1,33 +1,42 @@
 let lastSent = ''; // Last message sent to background
-let isSelecting = false; // Is user selecting or no
+let isSelecting = false; // Is user selecting text?
 
-// Listen for when user starts selecting text
+
+// Start of selection gesture (mouse dragging)
 document.addEventListener('selectstart', () => {
     isSelecting = true;
 });
 
-// Listen for when user stops selecting text
-document.addEventListener('mouseup', () => {
-    const selected = window.getSelection();
-    const text = selected.toString().trim();
-    const hasSelected = !selected.isCollapsed; // Is there text highlighted?
 
-    // Case 1: User had selection gesture and has selected text
-    if (isSelecting && hasSelected) {
-        if (text !== '' && text !== lastSent) { // User did not select the same text twice
-            chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : text}});
-            lastSent = text;
-            console.log(text);
-        }
-        isSelecting = false;
-        return;
+// End of selection gesture
+document.addEventListener('mouseup', () => {
+    isSelecting = false; // User let go of mouse click, selecting is false
+    const selected = window.getSelection(); // Current highlighted item
+    const text = selected.toString().trim(); // Highlighted text
+    const hasSelected = !selected.isCollapsed; // True if there is highlighted text
+
+    // User highlighted new text
+    if (hasSelected && text !== '' && text !== lastSent) {
+        chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : text}});
+        lastSent = text;
+        console.log(text);
     }
 
-    // Case 2: User clicks on something on the page or user clicks away from highlighted text (no selection)
-    if (!hasSelected && lastSent !== '') {
+    // User unselects text/clicks away
+    else if (!hasSelected && lastSent !== '') {
         chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : ''}});
         lastSent = '';
         console.log('Unselected text');
     }
-    isSelecting = false;
+});
+
+
+// User unselects text without clicking away (keyboard event)
+document.addEventListener('selectionchange', () => {
+    const selected = window.getSelection();
+    if (selected.isCollapsed && lastSent !== '') {
+        chrome.runtime.sendMessage({type : 'SELECTION_CHANGED', payload : {text : ''}});
+        lastSent = '';
+        console.log('Unselected text');
+    }
 });
