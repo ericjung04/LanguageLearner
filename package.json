@@ -1,0 +1,16 @@
+{
+  "name": "linguist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive subtitle Chrome extension",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "vite": "^7.2.2"
+  }
+}

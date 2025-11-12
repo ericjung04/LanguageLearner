@@ -1,5 +1,6 @@
 let lastSent = ''; // Last message sent to background
 let isSelecting = false; // Is user selecting text?
+let mirrorRoot = null; // points to the selectable subtitles element
 
 
 // Start of selection gesture (mouse dragging)
@@ -90,7 +91,7 @@ document.addEventListener('selectionchange', () => {
     // Expanded selection not through mouse selection (shift + arrow, word jump, etc)
     if (hasSelected && !isSelecting && text !== '' && text !== lastSent) {
         const message = buildPayload(text);
-        sendMessage(message);
+        safeSend(message);
         lastSent = text;
         console.log(message.payload);
     }
