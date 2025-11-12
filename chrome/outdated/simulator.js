@@ -1,6 +1,10 @@
 // Subtitles simulator (dev/testing only)
 // Runs on example.com by default, can enable anywhere with: localStorage.setItem('linguist_sim','1')
 
+/**
+ * NOTE: THIS FILE IS FOR FUTURE REFERNCE ONLY, NO PURPOSE IN THE PROGRAM
+ */
+
 (function () {
   const DEV_TEST_HOST = 'example.com';
   const devEnabled = (() => {

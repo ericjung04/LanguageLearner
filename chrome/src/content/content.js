@@ -1,6 +1,41 @@
+// Import subtitle and youtube caption renderer
+import * as Subtitles from './subtitles/subtitles.js';
+import {start as startYoutube} from './adapters/youtube.js'
+
 let lastSent = ''; // Last message sent to background
 let isSelecting = false; // Is user selecting text?
 let mirrorRoot = null; // points to the selectable subtitles element
+
+
+// Create overlay and Shadow DOM
+let host = document.getElementById('linguist-overlay');
+if (!host) {
+  host = document.createElement('div');
+  host.id = 'linguist-overlay';
+  // keep it out of layout/ARIA
+  host.style.all = 'initial';
+  document.documentElement.appendChild(host);
+}
+const shadow = host.shadowRoot || host.attachShadow({mode : 'open'});
+
+
+// Init subtitles component in the shadow
+Subtitles.init(shadow);
+mirrorRoot = Subtitles.getRootElement?.(); // Mirrored subtitles
+
+
+// Start youtube adapter, updates mirror when captions change
+const stopYT = startYoutube(({ text, rect }) => {
+  Subtitles.update({ text, rect });
+});
+
+
+// Checks if user selected text is from the mirrored subtitles
+function isInsideMirror(node) {
+  if (!mirrorRoot || !node) return false;
+  const el = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+  return mirrorRoot.contains(el);
+}
 
 
 // Start of selection gesture (mouse dragging)
@@ -28,12 +63,6 @@ async function safeSend(message) {
 // Builds payload for the message to be sent to the background with the user selected text
 function buildPayload(text) {
     let data = null;
-    try {
-        if (window.__linguistSim?.isActive) {
-            data = window.__linguistSim.getCurrentCueAndContext();
-        }
-    }
-    catch (_) {}
 
     return {type : 'SELECTION_CHANGED', 
         payload : {
@@ -53,6 +82,11 @@ document.addEventListener('mouseup', () => {
     const selected = window.getSelection(); // Current highlighted item
     const text = selected.toString().trim(); // Highlighted text
     const hasSelected = !selected.isCollapsed; // True if there is highlighted text
+
+    const anchorNode = selected.anchorNode || selected.focusNode;
+    if (hasSelected && !isInsideMirror(anchorNode)) {
+        return; // ignore selections outside mirrored subtitles
+    }
 
     // User highlighted new text
     if (hasSelected && text !== '' && text !== lastSent) {
@@ -79,6 +113,11 @@ document.addEventListener('selectionchange', () => {
 
     const text = selected.toString().trim();
     const hasSelected = !selected.isCollapsed;
+
+    const anchorNode = selected.anchorNode || selected.focusNode;
+    if (hasSelected && !isInsideMirror(anchorNode)) {
+        return; // ignore selections outside mirrored subtitles
+    }
 
     // User deselected text
     if (!hasSelected && lastSent !== '') {

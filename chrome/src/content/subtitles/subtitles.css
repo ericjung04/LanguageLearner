@@ -1,0 +1,29 @@
+/* host overlay should not block clicks */
+:host { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
+
+.subtitle-text {
+  position: absolute;
+  display: none;              /* hide by default */
+  pointer-events: auto;       /* allow selection */
+  user-select: text;
+
+  /* neutral defaults so empty box is invisible */
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+  max-width: none;
+  text-shadow: none;
+}
+
+/* Only when we have real text, apply the bubble look */
+.subtitle-text.visible {
+  display: block;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 22px;
+  text-align: center;
+  white-space: pre-wrap;
+}
