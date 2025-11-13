@@ -4,6 +4,8 @@ const saveButton = document.getElementById('saveButton');
 const savedText = document.getElementById('savedText');
 const selectedText = document.getElementById('selectedText');
 
+console.log('Extension Loaded');
+
 // Display previously saved note (No purpose, for later reference)
 if (noteInput && savedText) {
   chrome.storage.local.get('note', (data) => {
@@ -36,11 +38,9 @@ function getSelectedText() {
 }
 
 
-if (document.readyState === 'loading') 
-{
+if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', getSelectedText);
 }
-else 
-{
+else {
   getSelectedText();
 }
