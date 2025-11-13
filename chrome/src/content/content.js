@@ -1,40 +1,51 @@
 // Import subtitle and youtube caption renderer
 import * as Subtitles from './subtitles/subtitles.js';
-import {start as startYoutube} from './adapters/youtube.js'
+import {start as startYoutube} from './adapters/youtube.js';
 
 let lastSent = ''; // Last message sent to background
 let isSelecting = false; // Is user selecting text?
-let mirrorRoot = null; // points to the selectable subtitles element
+let customRoot = null; // Points to the selectable subtitles element
 
 
 // Create overlay and Shadow DOM
 let host = document.getElementById('linguist-overlay');
 if (!host) {
-  host = document.createElement('div');
-  host.id = 'linguist-overlay';
-  // keep it out of layout/ARIA
-  host.style.all = 'initial';
-  document.documentElement.appendChild(host);
+    host = document.createElement('div');
+    host.id = 'linguist-overlay';
+    host.style.all = 'initial'; // Keep it out of main content page
+    host.style.pointerEvents = 'none';
+    document.documentElement.appendChild(host);
 }
 const shadow = host.shadowRoot || host.attachShadow({mode : 'open'});
 
 
-// Init subtitles component in the shadow
+// Init subtitles component in the shadow DOM
 Subtitles.init(shadow);
-mirrorRoot = Subtitles.getRootElement?.(); // Mirrored subtitles
+customRoot = Subtitles.getRootElement?.(); // Custom subtitles
 
 
-// Start youtube adapter, updates mirror when captions change
-const stopYT = startYoutube(({ text, rect }) => {
-  Subtitles.update({ text, rect });
+// Hide original subtitles but keep them in DOM so we can read them
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+  .ytp-caption-window-container {
+    opacity: 0 !important;
+  }`
+;
+document.documentElement.appendChild(styleEl);
+
+
+// Start youtube adapter, updates subtitles when they change
+// stopYT disconnects Youtube adapter (Callback function at bottom of youtube.js)
+const stopYT = startYoutube(({text}) => {
+    Subtitles.update({text}); // Callback function when subtitles change (onCaption function in youtube.js)
 });
 
 
-// Checks if user selected text is from the mirrored subtitles
-function isInsideMirror(node) {
-  if (!mirrorRoot || !node) return false;
-  const el = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
-  return mirrorRoot.contains(el);
+// Checks if user selected text is from the custom subtitles
+function isInsideCustom(node) {
+    if (!customRoot || !node) return false;
+    const el = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+    return customRoot.contains(el);
 }
 
 
@@ -60,6 +71,7 @@ async function safeSend(message) {
     }
 }
 
+
 // Builds payload for the message to be sent to the background with the user selected text
 function buildPayload(text) {
     let data = null;
@@ -84,8 +96,8 @@ document.addEventListener('mouseup', () => {
     const hasSelected = !selected.isCollapsed; // True if there is highlighted text
 
     const anchorNode = selected.anchorNode || selected.focusNode;
-    if (hasSelected && !isInsideMirror(anchorNode)) {
-        return; // ignore selections outside mirrored subtitles
+    if (hasSelected && !isInsideCustom(anchorNode)) {
+        return; // Ignore selections outside custom subtitles
     }
 
     // User highlighted new text
@@ -115,8 +127,8 @@ document.addEventListener('selectionchange', () => {
     const hasSelected = !selected.isCollapsed;
 
     const anchorNode = selected.anchorNode || selected.focusNode;
-    if (hasSelected && !isInsideMirror(anchorNode)) {
-        return; // ignore selections outside mirrored subtitles
+    if (hasSelected && !isInsideCustom(anchorNode)) {
+        return; // Ignore selections outside custom subtitles
     }
 
     // User deselected text

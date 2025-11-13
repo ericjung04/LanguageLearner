@@ -1,29 +1,31 @@
-/* host overlay should not block clicks */
-:host { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
-
-.subtitle-text {
-  position: absolute;
-  display: none;              /* hide by default */
-  pointer-events: auto;       /* allow selection */
-  user-select: text;
-
-  /* neutral defaults so empty box is invisible */
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  margin: 0;
-  max-width: none;
-  text-shadow: none;
+/* Make sure Youtube is still clickable */
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
 }
 
-/* Only when we have real text, apply the bubble look */
-.subtitle-text.visible {
-  display: block;
-  padding: 6px 12px;
-  background: rgba(0,0,0,0.6);
-  border-radius: 8px;
-  color: #fff;
-  font-size: 22px;
-  text-align: center;
+/* Subtitle text */
+.subtitle-text {
   white-space: pre-wrap;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+               Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 32px;          
+  line-height: 1.3;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+}
+
+/* Subtitle box */
+.subtitle-text.visible {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  text-shadow:
+    0 0 2px #000,
+    0 0 4px #000;
 }

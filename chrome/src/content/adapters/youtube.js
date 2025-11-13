@@ -1,26 +1,43 @@
-// Read and display captions from youtube videos
+// Read and display captions from youtube videos in our custom subtitles
 export function start(onCaption) {
-    // Find youtube caption root container
-    const root = document.querySelector('.ytp-caption-window-container') || document.querySelector('.ytp-caption-window');
-    if (!root) return null;
+  // Find youtube caption root container
+  let root = document.querySelector('.ytp-caption-window-container') || document.querySelector('.ytp-caption-window');
+  if (!root) return null; // No captions available
 
-    // Helper to read all current captions and put them in one string
-    const readText = () => [...document.querySelectorAll('.ytp-caption-segment')].map(n => n.innerText).join(' ').trim();
 
-    // Display current captions text
-    const emit = () => {
-        const text = readText();
-        // if (!text) return;
-        const r = root.getBoundingClientRect();
-        onCaption({text, rect: { top: r.top, left: r.left, width: r.width, height: r.height }
-    });
+  // Helper to read the actual subtitle text
+  const readText = () => root.innerText.trim();
+
+
+  // Helper that sends latest subtitles to custom subtitles to display
+  const emit = () => {
+    // In case subtitle HTML element changes in Youtube
+    root = document.querySelector('.ytp-caption-window-container') || document.querySelector('.ytp-caption-window');
+    if (!root) return;
+
+    const text = readText(); // Get original subtitle text
+
+    // Callback function for content script to update subtitles when changes occur
+    onCaption({text});
   };
 
-    // Display and observe caption changes
-    emit();
-    const obs = new MutationObserver(() => emit());
-    obs.observe(root, { childList: true, characterData: true, subtree: true });
 
-    // Return a cleanup function to stop watching for caption changes
-    return () => obs.disconnect();
+  // Watch for caption DOM changes (text, nodes, style), call emit() when it does
+  const domObserver = new MutationObserver(emit);
+  domObserver.observe(document.body, {
+    childList : true,
+    subtree : true,
+    characterData : true,
+    attributes : true,
+  });
+
+  
+  // Send very first caption state to custom subtitles
+  emit();
+
+
+  // Return cleanup function for content script (called stopYT in content.js)
+  return () => {
+    domObserver.disconnect();
+  };
 }
