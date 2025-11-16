@@ -4,21 +4,6 @@ const tabs = {}; // Stores last selected text per tab
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch (message?.type) 
     {
-        case 'PING': // For testing purposes, will later be different message types
-        {
-            console.log('PING from ', sender?.id, 'message: ', message.payload);
-            chrome.tabs.query({active : true, currentWindow : true}, (tabs) => {
-                const [tab] = tabs;
-                chrome.tabs.sendMessage(tab.id, {type : 'PING'}, (response) => {
-                if (response.ok) {
-                    console.log('Content script received PING!');
-                }
-                });
-            });
-            sendResponse({ok : true, data : {pong : true, ts : Date.now()}});
-            return; // Synchronous response so no need to keep channel open
-        }
-
         case 'SELECTION_CHANGED' : // User selected/deselected text on the page
         {
             // Get tab where text was selected, send error if can't find ID
@@ -34,13 +19,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 tabs[tabId] = {savedText : '', cues : []};
             }
 
-            // Store current tabs selected text
-            if (tabId) {
-                tabs[tabId].savedText = message.payload.text || ''; // Empty string when user deselects text
-            }
+            const payload = message.payload || null;
+
+            // Save full payload, not just text
+            tabs[tabId].selection = payload;
 
             // Confirmation purposes
-            console.log('Tab ', tabId, ' text:', tabs[tabId].savedText);
+            console.log('Tab ', tabId, ' Selection:', payload);
+            console.log('Readable:\n', JSON.stringify(payload, null, 2));
             sendResponse({ok : true});
             return;
         }
