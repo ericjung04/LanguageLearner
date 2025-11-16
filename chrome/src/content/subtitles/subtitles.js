@@ -1,3 +1,7 @@
+/**
+ * Custom Subtitle component that displays the subtitles from the video the user is watching
+ */
+
 import html from './subtitles.html?raw'; // HTML for subtitles
 import css from './subtitles.css?inline'; // CSS for subtitles
 

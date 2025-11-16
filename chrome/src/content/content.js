@@ -1,10 +1,27 @@
-// Import subtitle and youtube caption renderer
+/**
+ * Main content script for Linguist extension
+ * 
+ * - Injects the universal subtitle overlay (Shadow DOM)
+ * - Connects to the active platform adapter (only Youtube currently, will add other platforms later) to receive caption updates
+ * - Mirrors platform captions into the interactive subtitle component
+ * - Detects user text selections inside the subtitle overlay
+ * - Builds flashcard payloads using context provided by the adapter
+ * - Sends events to the background script for storage or UI actions
+ */
+
+// Import Subtitle component and Youtube adapter
 import * as Subtitles from './subtitles/subtitles.js';
-import {start as startYoutube} from './adapters/youtube.js';
+import { start as startYoutube, getContextForTime } from './adapters/youtube.js';
 
 let lastSent = ''; // Last message sent to background
-let isSelecting = false; // Is user selecting text?
-let customRoot = null; // Points to the selectable subtitles element
+
+
+// Normalize selected text by collapsing whitespace/newline into a single space
+function normalizeSelectedText(text) {
+    return (text || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 
 // Create overlay and Shadow DOM
@@ -13,58 +30,32 @@ if (!host) {
     host = document.createElement('div');
     host.id = 'linguist-overlay';
     host.style.all = 'initial'; // Keep it out of main content page
-    host.style.pointerEvents = 'none';
     document.documentElement.appendChild(host);
 }
-const shadow = host.shadowRoot || host.attachShadow({mode : 'open'});
-
-
-// Init subtitles component in the shadow DOM
+const shadow = host.shadowRoot || host.attachShadow({mode: 'open'});
 Subtitles.init(shadow);
-customRoot = Subtitles.getRootElement?.(); // Custom subtitles
-
-
-// Hide original subtitles but keep them in DOM so we can read them
-const styleEl = document.createElement('style');
-styleEl.textContent = `
-  .ytp-caption-window-container {
-    opacity: 0 !important;
-  }`
-;
-document.documentElement.appendChild(styleEl);
 
 
 // Start youtube adapter, updates subtitles when they change
-// stopYT disconnects Youtube adapter (Callback function at bottom of youtube.js)
-const stopYT = startYoutube(({text}) => {
-    Subtitles.update({text}); // Callback function when subtitles change (onCaption function in youtube.js)
+// stopYT disconnects Youtube adapter (cleanup when you need it)
+const stopYT = startYoutube(({ text }) => {
+    Subtitles.update({ text }); // Mirror text into the custom subtitles
 });
 
 
-// Checks if user selected text is from the custom subtitles
-function isInsideCustom(node) {
-    if (!customRoot || !node) return false;
-    const el = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
-    return customRoot.contains(el);
-}
-
-
-// Start of selection gesture (mouse dragging)
-document.addEventListener('selectstart', () => {
-    isSelecting = true;
-});
-
-
-// Safely sends messages to background, prevents crashes when context is invalidated (i.e. awake from sleep, reload extension, background unload)
+// Safely sends messages to background, prevents crashes when context is invalidated
 async function safeSend(message) {
     if (!chrome?.runtime?.id) return;
 
     try {
         await chrome.runtime.sendMessage(message);
-    }
-    catch (e) {
+    } catch (e) {
         const msg = String(e?.message || e);
-        if (msg.includes('Extension context invalidated') || msg.includes('Receiving end does not exist')) { // Expected errors to be caught
+        if (
+            msg.includes('Extension context invalidated') ||
+            msg.includes('Receiving end does not exist')
+        ) {
+            // Expected errors to be caught
             return;
         }
         console.error('sendMessage failed: ', e);
@@ -72,78 +63,66 @@ async function safeSend(message) {
 }
 
 
-// Builds payload for the message to be sent to the background with the user selected text
+// Builds payload with user selected text for the message to be sent to the background
 function buildPayload(text) {
     let data = null;
 
-    return {type : 'SELECTION_CHANGED', 
-        payload : {
-            text : text, // User selected text
-            cueText : data?.cue?.text || null, // Full subtitle line of what the user selected from
-            cueId : data?.cue?.id || null, // Identifier of the subtitle line the text came from
-            contextCues : data?.contextCues || [], // Nearby subtitles for more context of the selected text
-            timeRange : data?.timeRange || null // Start and end time of current cue +/- small buffer for surrounding context
+    if (text && text.trim() !== '') {
+        const video = document.querySelector('video');
+        const anchorTime = video?.currentTime ?? null;
+
+        if (anchorTime !== null) {
+            // Ask the adapter for context around this time
+            data = getContextForTime(anchorTime);
+        }
+    }
+
+    return {
+        type: 'SELECTION_CHANGED',
+        payload: {
+            text, // User selected text
+            subtitleText: data?.subtitleText ?? null, // Full subtitle line
+            anchorTime: data?.anchorTime ?? null, // When the selection happened
+            fullContextText: data?.fullContextText ?? null, // 15sec of context before selected words
         }
     };
 }
 
 
+// Returns the current text selection inside subtitles or null if nothing is selected
+function getCustomSelection() {
+    if (!shadow || !shadow.getSelection) return null;
+
+    const sel = shadow.getSelection();
+    if (!sel || sel.isCollapsed) return null; // Nothing selected
+
+    return sel;
+}
+
+
 // End of selection gesture (mouse click released)
 document.addEventListener('mouseup', () => {
-    isSelecting = false; // User released mouse click, selecting is false
-    const selected = window.getSelection(); // Current highlighted item
-    const text = selected.toString().trim(); // Highlighted text
-    const hasSelected = !selected.isCollapsed; // True if there is highlighted text
+    const sel = getCustomSelection();
+    const rawText = sel ? sel.toString().trim() : '';
+    const text = normalizeSelectedText(rawText);
+    const hasSelected = text.length > 0;
 
-    const anchorNode = selected.anchorNode || selected.focusNode;
-    if (hasSelected && !isInsideCustom(anchorNode)) {
-        return; // Ignore selections outside custom subtitles
+    // No selection inside custom subtitles
+    if (!hasSelected) {
+        if (lastSent !== '') {
+            safeSend(buildPayload(''));
+            lastSent = '';
+            console.log('Unselected text');
+        }
+        return;
     }
 
-    // User highlighted new text
-    if (hasSelected && text !== '' && text !== lastSent) {
+    // New selection inside custom subtitles
+    if (text !== '' && text !== lastSent) {
         const message = buildPayload(text);
         safeSend(message);
         lastSent = text;
         console.log(text);
-        console.log(message.payload);
-    }
-
-    // User unselects text/clicks away
-    else if (!hasSelected && lastSent !== '') {
-        safeSend(buildPayload(''));
-        lastSent = '';
-        console.log('Unselected text');
-    }
-});
-
-
-// Selection changed (keyboard adjust, double click extend, etc)
-document.addEventListener('selectionchange', () => {
-    const selected = window.getSelection();
-    if (!selected) return;
-
-    const text = selected.toString().trim();
-    const hasSelected = !selected.isCollapsed;
-
-    const anchorNode = selected.anchorNode || selected.focusNode;
-    if (hasSelected && !isInsideCustom(anchorNode)) {
-        return; // Ignore selections outside custom subtitles
-    }
-
-    // User deselected text
-    if (!hasSelected && lastSent !== '') {
-        safeSend(buildPayload(''));
-        lastSent = '';
-        console.log('Unselected text');
-        return;
-    }
-
-    // Expanded selection not through mouse selection (shift + arrow, word jump, etc)
-    if (hasSelected && !isSelecting && text !== '' && text !== lastSent) {
-        const message = buildPayload(text);
-        safeSend(message);
-        lastSent = text;
         console.log(message.payload);
     }
 });

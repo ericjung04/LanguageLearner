@@ -1,9 +1,8 @@
-/* Make sure Youtube is still clickable */
+/* Allow clicking through to the underlying video player */
 :host {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  pointer-events: none;
 }
 
 /* Subtitle text */
